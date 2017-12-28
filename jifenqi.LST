@@ -1,0 +1,482 @@
+C51 COMPILER V9.00   JIFENQI                                                               10/29/2017 21:03:02 PAGE 1   
+
+
+C51 COMPILER V9.00, COMPILATION OF MODULE JIFENQI
+OBJECT MODULE PLACED IN jifenqi.OBJ
+COMPILER INVOKED BY: C:\Keil\C51\BIN\C51.EXE jifenqi.c BROWSE DEBUG OBJECTEXTEND
+
+line level    source
+
+   1          #include<reg51.h>
+   2          
+   3          #define LEDData P0
+   4          
+   5          unsigned char code LEDCode[]={0x3f,0x06,0x5b,0x4f,0x66,0x6d,0x7d,0x07,0x7f,0x6f};
+   6          
+   7          unsigned char minit,second,count,count1;                //分，秒，计数器
+   8          
+   9          sbit add1=P1^0;                                         //甲对加分，每按一次加1分   /在未开始比赛时为加时间分
+  10          sbit dec1=P1^1;                                         //甲对减分，每按一次减1分       /在未开始比赛时为减时间分
+  11          sbit exchange=P1^2;                                     //交换场地
+  12          sbit add2=P1^3;                                         //乙对加分，每按一次加1分       /在未开始比赛时为加时间秒
+  13          sbit dec2=P1^4;                                         //乙对减分，每按一次减1分       /在未开始比赛时为减时间秒
+  14          sbit secondpoint=P0^7;                          //秒闪动点
+  15          //----依次点亮数码管的位------
+  16          sbit led1=P2^7;
+  17          sbit led2=P2^6;
+  18          sbit led3=P2^5;
+  19          sbit led4=P2^4;
+  20          sbit led5=P2^3;
+  21          sbit led6=P2^2;
+  22          sbit led7=P2^1;
+  23          sbit led8=P2^0;
+  24          sbit led9=P3^7;
+  25          sbit led10=P3^6;
+  26          sbit led11=P3^5;
+  27          
+  28          sbit alam=P1^7;                                         //报警
+  29          
+  30          bit  playon=0;                                          //比赛进行标志位，为1时表示比赛开始，计时开启
+  31          bit  timeover=0;                                        //比赛结束标志位，为1时表示时间已经完
+  32          bit  AorB=0;                                            //甲乙对交换位置标志位
+  33          bit  halfsecond=0;                                      //半秒标志位
+  34          
+  35          unsigned int scoreA;                            //甲队得分
+  36          unsigned int scoreB;                            //乙队得分
+  37                          
+  38          
+  39          void Delay5ms(void)
+  40          {
+  41   1              unsigned int i;
+  42   1              for(i=100;i>0;i--);
+  43   1      }
+  44          
+  45          
+  46          void display(void)
+  47          {
+  48   1      //-----------显示时间分--------------
+  49   1              LEDData=LEDCode[minit/10];
+  50   1              led1=0;
+  51   1              Delay5ms();
+  52   1              led1=1;
+  53   1              LEDData=LEDCode[minit%10];
+  54   1              led2=0;
+  55   1              Delay5ms();
+C51 COMPILER V9.00   JIFENQI                                                               10/29/2017 21:03:02 PAGE 2   
+
+  56   1              led2=1;
+  57   1      //-------------秒点闪动------------
+  58   1              if(halfsecond==1)
+  59   1                      LEDData=0x80;
+  60   1              else
+  61   1                      LEDData=0x00;
+  62   1              led2=0;
+  63   1              Delay5ms();
+  64   1              led2=1;
+  65   1              secondpoint=0;
+  66   1      //-----------显示时间秒------------
+  67   1              LEDData=LEDCode[second/10];
+  68   1              led3=0;
+  69   1              Delay5ms();
+  70   1              led3=1;
+  71   1              LEDData=LEDCode[second%10];
+  72   1              led4=0;
+  73   1              Delay5ms();
+  74   1              led4=1;
+  75   1      //-----------显示1组的分数百位-------
+  76   1              if(AorB==0)
+  77   1                      LEDData=LEDCode[scoreA/100];
+  78   1              else
+  79   1                      LEDData=LEDCode[scoreB/100];
+  80   1              led5=0;
+  81   1              Delay5ms();
+  82   1              led5=1;
+  83   1      //---------------显示1组分数的十位-----------
+  84   1              if(AorB==0)
+  85   1                      LEDData=LEDCode[(scoreA%100)/10];
+  86   1              else
+  87   1                      LEDData=LEDCode[(scoreB%100)/10];
+  88   1              led6=0;
+  89   1              Delay5ms();
+  90   1              led6=1;
+  91   1      
+  92   1      //---------------显示1组分数的个位-----------
+  93   1              if(AorB==0)
+  94   1                      LEDData=LEDCode[scoreA%10];
+  95   1              else
+  96   1                      LEDData=LEDCode[scoreB%10];
+  97   1              led7=0;
+  98   1              Delay5ms();
+  99   1              led7=1;
+ 100   1      
+ 101   1      //-----------显示2组分数的百位-------
+ 102   1              if(AorB==1)
+ 103   1                      LEDData=LEDCode[scoreA/100];
+ 104   1              else
+ 105   1                      LEDData=LEDCode[scoreB/100];
+ 106   1              led8=0;
+ 107   1              Delay5ms();
+ 108   1              led8=1;
+ 109   1      //-----------显示2组分数的十位-----------
+ 110   1              if(AorB==1)
+ 111   1                      LEDData=LEDCode[(scoreA%100)/10];
+ 112   1              else
+ 113   1                      LEDData=LEDCode[(scoreB%100)/10];
+ 114   1              led9=0;
+ 115   1              Delay5ms();
+ 116   1              led9=1;
+ 117   1      
+C51 COMPILER V9.00   JIFENQI                                                               10/29/2017 21:03:02 PAGE 3   
+
+ 118   1      //-----------显示2组分数的个位-----------
+ 119   1              if(AorB==1)
+ 120   1                      LEDData=LEDCode[scoreA%10];
+ 121   1              else
+ 122   1                      LEDData=LEDCode[scoreB%10];
+ 123   1              led10=0;
+ 124   1              Delay5ms();
+ 125   1              led10=1;
+ 126   1      }
+ 127          
+ 128          
+ 129          //=========================按键检测程序================================================
+ 130          void keyscan(void)
+ 131          {
+ 132   1              if(playon==0)
+ 133   1              {
+ 134   2                      if(add1==0)
+ 135   2                      {
+ 136   3                              display();
+ 137   3                              if(add1==0);
+ 138   3                              {
+ 139   4                                      if(minit<99)
+ 140   4                                              minit++;
+ 141   4                                      else
+ 142   4                                              minit=99;
+ 143   4                              }
+ 144   3                              do
+ 145   3                                      display();
+ 146   3                              while(add1==0);
+ 147   3                      }
+ 148   2      
+ 149   2                      if(dec1==0)
+ 150   2                      {
+ 151   3                              display();
+ 152   3                              if(dec1==0);
+ 153   3                              {
+ 154   4                                      if(minit>0)
+ 155   4                                              minit--;
+ 156   4                                      else
+ 157   4                                              minit=0;
+ 158   4                              }
+ 159   3                              do
+ 160   3                                      display();
+ 161   3                              while(dec1==0);
+ 162   3                      }
+ 163   2      
+ 164   2                      if(add2==0)
+ 165   2                      {
+ 166   3                              display();
+ 167   3                              if(add2==0);
+ 168   3                              {
+ 169   4                                      if(second<59)
+ 170   4                                              second++;
+ 171   4                                      else
+ 172   4                                              second=59;
+ 173   4                              }
+ 174   3                              do
+ 175   3                                      display();
+ 176   3                              while(add2==0);
+ 177   3                      }
+ 178   2      
+ 179   2                      if(dec2==0)
+C51 COMPILER V9.00   JIFENQI                                                               10/29/2017 21:03:02 PAGE 4   
+
+ 180   2                      {
+ 181   3                              display();
+ 182   3                              if(dec2==0);
+ 183   3                              {
+ 184   4                                      if(second>0)
+ 185   4                                              second--;
+ 186   4                                      else
+ 187   4                                              second=0;
+ 188   4                              }
+ 189   3                              do
+ 190   3                                      display();
+ 191   3                              while(dec2==0);
+ 192   3                      }
+ 193   2      
+ 194   2                      if(exchange==0)
+ 195   2                      {
+ 196   3                              display();
+ 197   3                              if(exchange==0);
+ 198   3                              {
+ 199   4                                      TR1=0;                                  //关闭T1计数器
+ 200   4                                      alam=1;                                 //关报警
+ 201   4                                      AorB=~AorB;                             //开启交换      
+ 202   4                                      minit=15;                               //并将时间预设为15：00
+ 203   4                                      second=0;
+ 204   4                              }
+ 205   3                              do
+ 206   3                                      display();
+ 207   3                              while(exchange==0);
+ 208   3                      }       
+ 209   2              }
+ 210   1              else
+ 211   1              {
+ 212   2                      if(add1==0)
+ 213   2                      {
+ 214   3                              display();
+ 215   3                              if(add1==0);
+ 216   3                              {
+ 217   4                                      if(AorB==0)
+ 218   4                                      {
+ 219   5                                              if(scoreA<999)
+ 220   5                                                      scoreA++;
+ 221   5                                              else
+ 222   5                                                      scoreA=999;
+ 223   5                                      }
+ 224   4                                      else
+ 225   4                                      {
+ 226   5                                              if(scoreB<999)
+ 227   5                                                      scoreB++;
+ 228   5                                              else
+ 229   5                                                      scoreB=999;
+ 230   5                                      }
+ 231   4                              }
+ 232   3                              do
+ 233   3                                      display();
+ 234   3                              while(add1==0);
+ 235   3                      }
+ 236   2      
+ 237   2                      if(dec1==0)
+ 238   2                      {
+ 239   3                              display();
+ 240   3                              if(dec1==0);
+ 241   3                              {
+C51 COMPILER V9.00   JIFENQI                                                               10/29/2017 21:03:02 PAGE 5   
+
+ 242   4                                      if(AorB==0)
+ 243   4                                      {
+ 244   5                                              if(scoreA>0)
+ 245   5                                                      scoreA--;
+ 246   5                                              else
+ 247   5                                                      scoreA=0;
+ 248   5                                      }
+ 249   4                                      else
+ 250   4                                      {
+ 251   5                                              if(scoreB>0)
+ 252   5                                                      scoreB--;
+ 253   5                                              else
+ 254   5                                                      scoreB=0;
+ 255   5                                      }
+ 256   4                              }
+ 257   3                              do
+ 258   3                                      display();
+ 259   3                              while(dec1==0);
+ 260   3                      }
+ 261   2      
+ 262   2                      if(add2==0)
+ 263   2                      {
+ 264   3                              display();
+ 265   3                              if(add2==0);
+ 266   3                              {
+ 267   4                                      if(AorB==1)
+ 268   4                                      {
+ 269   5                                              if(scoreA<999)
+ 270   5                                                      scoreA++;
+ 271   5                                              else
+ 272   5                                                      scoreA=999;
+ 273   5                                      }
+ 274   4                                      else
+ 275   4                                      {
+ 276   5                                              if(scoreB<999)
+ 277   5                                                      scoreB++;
+ 278   5                                              else
+ 279   5                                                      scoreB=999;
+ 280   5                                      }
+ 281   4                              }
+ 282   3                              do
+ 283   3                                      display();
+ 284   3                              while(add2==0);
+ 285   3                      }
+ 286   2      
+ 287   2                      if(dec2==0)
+ 288   2                      {
+ 289   3                              display();
+ 290   3                              if(dec2==0);
+ 291   3                              {
+ 292   4                                      if(AorB==1)
+ 293   4                                      {
+ 294   5                                              if(scoreA>0)
+ 295   5                                                      scoreA--;
+ 296   5                                              else
+ 297   5                                                      scoreA=0;
+ 298   5                                      }
+ 299   4                                      else
+ 300   4                                      {
+ 301   5                                              if(scoreB>0)
+ 302   5                                                      scoreB--;
+ 303   5                                              else
+C51 COMPILER V9.00   JIFENQI                                                               10/29/2017 21:03:02 PAGE 6   
+
+ 304   5                                                      scoreB=0;
+ 305   5                                      }
+ 306   4                              }
+ 307   3                              do
+ 308   3                                      display();
+ 309   3                              while(dec2==0);
+ 310   3                      }
+ 311   2              }
+ 312   1      }
+ 313                  
+ 314          
+ 315          
+ 316          //******************************主函数*************************************************
+ 317          void main(void)
+ 318          {
+ 319   1              TMOD=0x11;
+ 320   1              TL0=0xb0;
+ 321   1              TH0=0x3c;
+ 322   1              TL1=0xb0;
+ 323   1              TH1=0x3c;
+ 324   1              minit=15;                               //初始值为15：00
+ 325   1              second=0;
+ 326   1              EA=1;
+ 327   1              ET0=1;
+ 328   1              ET1=1;
+ 329   1              TR0=0;
+ 330   1              TR1=0;
+ 331   1              EX0=1;
+ 332   1              IT0=1;
+ 333   1              IT1=1;
+ 334   1      //      EX1=1;
+ 335   1              PX0=1;
+ 336   1      //      PX1=1;
+ 337   1              PT0=0;
+ 338   1              P1=0xFF;
+ 339   1              P3=0xFF;
+ 340   1              while(1)
+ 341   1              {
+ 342   2                      keyscan();
+ 343   2                      display();                      
+ 344   2          }
+ 345   1      }
+ 346          
+ 347          
+ 348          void PxInt0(void) interrupt 0
+ 349          {
+ 350   1              Delay5ms();
+ 351   1              EX0=0;
+ 352   1              alam=1;
+ 353   1              TR1=0;
+ 354   1              if(timeover==1)
+ 355   1              {
+ 356   2                      timeover=0;
+ 357   2              }
+ 358   1      
+ 359   1              if(playon==0)
+ 360   1              {
+ 361   2                      playon=1;                               //开始标志位
+ 362   2                      TR0=1;                                  //开启计时
+ 363   2              }
+ 364   1              else
+ 365   1              {
+C51 COMPILER V9.00   JIFENQI                                                               10/29/2017 21:03:02 PAGE 7   
+
+ 366   2                      playon=0;                               //开始标志位清零，表示暂停
+ 367   2                      TR0=0;                                  //暂时计时
+ 368   2              }       
+ 369   1              EX0=1;                                          //开中断        
+ 370   1      }
+ 371          
+ 372          /*
+ 373          void PxInt1(void) interrupt 2
+ 374          {
+ 375                  Delay5ms();
+ 376                  EX1=0;                                          //关中断
+ 377                  if(timeover==1)                         //比赛结束标志，必须一节结束后才可以交换，中途不能交换场地
+ 378                  {
+ 379                          TR1=0;                                  //关闭T1计数器
+ 380                          alam=1;                                 //关报警
+ 381                          AorB=~AorB;                             //开启交换      
+ 382                          minit=15;                               //并将时间预设为15：00
+ 383                          second=0;
+ 384                  }
+ 385                  EX1=1;                                          //开中断
+ 386          }
+ 387          */
+ 388          
+ 389          
+ 390          //*********************************中断服务函数**************************************
+ 391          void  time0_int(void) interrupt 1 
+ 392          {
+ 393   1              TL0=0xb0;
+ 394   1              TH0=0x3c;
+ 395   1              TR0=1;
+ 396   1              count++;
+ 397   1              if(count==10)
+ 398   1              {
+ 399   2                      halfsecond=0;
+ 400   2              }
+ 401   1      
+ 402   1              if(count==20)
+ 403   1              {
+ 404   2                      count=0;
+ 405   2                      halfsecond=1;
+ 406   2              
+ 407   2              if(second==0)
+ 408   2                      {
+ 409   3                              if(minit>0)
+ 410   3                              {
+ 411   4                                      second=59;
+ 412   4                                      minit--;
+ 413   4                              }
+ 414   3                              else
+ 415   3                              {
+ 416   4                                      timeover=1;
+ 417   4                                      playon=0;
+ 418   4                                      TR0=0;
+ 419   4                                      TR1=1;
+ 420   4                              }
+ 421   3                      }
+ 422   2                      else
+ 423   2                              second--;
+ 424   2              }
+ 425   1      }
+ 426          
+ 427          
+C51 COMPILER V9.00   JIFENQI                                                               10/29/2017 21:03:02 PAGE 8   
+
+ 428          //*********************************中断服务函数**************************************
+ 429          void  time1_int(void) interrupt 3
+ 430          {
+ 431   1              TL1=0xb0;
+ 432   1              TH1=0x3c;
+ 433   1              TR1=1;
+ 434   1              count1++;
+ 435   1              if(count1==10)
+ 436   1              {
+ 437   2                      alam=0;
+ 438   2              }
+ 439   1      
+ 440   1              if(count1==20)
+ 441   1              {
+ 442   2                      count1=0;
+ 443   2                      alam=1;
+ 444   2              }
+ 445   1      } 
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =   1006    ----
+   CONSTANT SIZE    =     10    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =      8    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =      4    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)
